@@ -63,6 +63,121 @@
       font-size: 12px;
       color: #9aabc0;
     }
+
+    /* MAP AND SIDEBAR LAYOUT */
+
+.map-layout {
+  display: flex;
+  width: 100%;
+  height: 75vh;
+  min-height: 500px;
+  background: #101827;
+}
+
+/* SIDEBAR */
+
+.sidebar {
+  width: 310px;
+  min-width: 270px;
+  background: #17243a;
+  color: white;
+  overflow-y: auto;
+  padding: 18px;
+  box-sizing: border-box;
+  border-right: 1px solid #33445e;
+}
+
+.sidebar-header h2 {
+  font-size: 21px;
+  margin: 0 0 6px;
+}
+
+.sidebar-header p {
+  color: #9aabc0;
+  font-size: 13px;
+  margin-bottom: 18px;
+}
+
+#destinationSearch {
+  width: 100%;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid #43536b;
+  border-radius: 7px;
+  background: #101827;
+  color: white;
+  font-size: 14px;
+  margin-bottom: 15px;
+}
+
+#destinationSearch::placeholder {
+  color: #9aabc0;
+}
+
+#destinationCount {
+  color: #9aabc0;
+  font-size: 12px;
+  margin-bottom: 12px;
+}
+
+/* DESTINATION CARDS */
+
+.destination-item {
+  padding: 12px;
+  border-bottom: 1px solid #33445e;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.destination-item:hover {
+  background: #263b58;
+}
+
+.destination-code {
+  color: #38bdf8;
+  font-weight: bold;
+  font-size: 15px;
+}
+
+.destination-city {
+  color: white;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.destination-airlines {
+  color: #9aabc0;
+  font-size: 11px;
+  margin-top: 5px;
+}
+
+/* MAP */
+
+#map {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+}
+
+/* MOBILE RESPONSIVENESS */
+
+@media (max-width: 700px) {
+  .map-layout {
+    flex-direction: column;
+    height: auto;
+  }
+
+  .sidebar {
+    width: 100%;
+    height: 300px;
+    min-width: 0;
+  }
+
+  #map {
+    height: 550px;
+    flex: none;
+  }
+}
   </style>
 </head>
 
@@ -81,7 +196,32 @@
   </select>
 </div>
 
-<div id="map"></div>
+<div class="map-layout">
+
+  <!-- LEFT DESTINATION SIDEBAR -->
+  <aside class="sidebar">
+
+    <div class="sidebar-header">
+      <h2>CVG Destinations</h2>
+      <p>Explore nonstop destinations</p>
+    </div>
+
+    <input
+      type="text"
+      id="destinationSearch"
+      placeholder="Search destinations..."
+    >
+
+    <div id="destinationCount"></div>
+
+    <div id="destinationList"></div>
+
+  </aside>
+
+  <!-- INTERACTIVE MAP -->
+  <div id="map"></div>
+
+</div>
 
 <div class="stats" id="stats">
   Loading routes...
@@ -278,6 +418,8 @@
 
   // Route lines
   const routeLayer = L.layerGroup().addTo(map);
+  // Store destination markers for sidebar clicks
+const destinationMarkers = {};
 
   // Create curved flight route
   function createArc(start, end) {
@@ -385,7 +527,37 @@
     });
 
     // Destination airport markers
-    destinations.forEach(code => {
+Object.keys(destinationMarkers).forEach(code => {
+  delete destinationMarkers[code];
+});
+
+destinations.forEach(code => {
+  const airport = airports[code];
+
+  const marker = L.circleMarker(
+    [airport.lat, airport.lng],
+    {
+      radius: 6,
+      color: "#ffffff",
+      fillColor: "#f59e0b",
+      fillOpacity: 1,
+      weight: 2
+    }
+  );
+
+  marker.bindPopup(
+    "<b>" + code + "</b><br>" +
+    airport.city +
+    "<br>Origin: CVG"
+  );
+
+  marker.addTo(airportLayer);
+
+  destinationMarkers[code] = marker;
+});
+
+// Build destination sidebar
+renderDestinations(filteredRoutes);
       const airport = airports[code];
 
       L.circleMarker(
@@ -410,7 +582,58 @@
       filteredRoutes.length + " route entries | " +
       destinations.size + " destinations";
   }
+count.textContent =
+    matchingCodes.length + " destinations";
 
+  matchingCodes.forEach(code => {
+
+    const airport = airports[code];
+
+    const item = document.createElement("div");
+    item.className = "destination-item";
+
+    const airportCode = document.createElement("div");
+    airportCode.className = "destination-code";
+    airportCode.textContent = code;
+
+    const city = document.createElement("div");
+    city.className = "destination-city";
+    city.textContent = airport.city;
+
+    const airlines = document.createElement("div");
+    airlines.className = "destination-airlines";
+    airlines.textContent =
+      grouped[code].join(" • ");
+
+    item.appendChild(airportCode);
+    item.appendChild(city);
+    item.appendChild(airlines);
+
+    item.addEventListener("click", () => {
+
+      const marker = destinationMarkers[code];
+
+      if (marker) {
+        map.setView(
+          [airport.lat, airport.lng],
+          6,
+          { animate: true }
+        );
+
+        marker.openPopup();
+      }
+
+    });
+
+    list.appendChild(item);
+  });
+}
+
+// Update destinations while searching
+document.getElementById("destinationSearch")
+  .addEventListener("input", () => {
+    drawMap();
+  });
   filter.addEventListener("change", drawMap);
 
   drawMap();
