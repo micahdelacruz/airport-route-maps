@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CVG Airport Route Map</title>
+
+  <!-- Leaflet map library -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  />
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #101827;
+      color: white;
+    }
+
+    header {
+      padding: 22px;
+      text-align: center;
+      background: #17243a;
+    }
+
+    header h1 {
+      margin: 0 0 8px;
+    }
+
+    header p {
+      color: #b9c7d9;
+      margin: 0;
+    }
+
+    .controls {
+      padding: 15px;
+      text-align: center;
+    }
+
+    select {
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 15px;
+    }
+
+    #map {
+      height: 72vh;
+      min-height: 450px;
+      width: 100%;
+    }
+
+    .stats {
+      text-align: center;
+      padding: 15px;
+      color: #b9c7d9;
+    }
+
+    footer {
+      text-align: center;
+      padding: 15px;
+      font-size: 12px;
+      color: #9aabc0;
+    }
+  </style>
+</head>
+
+<body>
+
+<header>
+  <h1>CVG Airport Route Network</h1>
+  <p>Cincinnati/Northern Kentucky International Airport</p>
+</header>
+
+<div class="controls">
+  <label for="airlineFilter">Filter by airline: </label>
+
+  <select id="airlineFilter">
+    <option value="All">All Airlines</option>
+  </select>
+</div>
+
+<div id="map"></div>
+
+<div class="stats" id="stats">
+  Loading routes...
+</div>
+
+<footer>
+  Airport route visualization | Data should be independently verified
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  // Airport coordinates
+  const airports = {
+    CVG: {
+      city: "Cincinnati, USA",
+      lat: 39.0488,
+      lng: -84.6678
+    },
+    ATL: {
+      city: "Atlanta, USA",
+      lat: 33.6407,
+      lng: -84.4277
+    },
+    ORD: {
+      city: "Chicago, USA",
+      lat: 41.9742,
+      lng: -87.9073
+    },
+    JFK: {
+      city: "New York, USA",
+      lat: 40.6413,
+      lng: -73.7781
+    },
+    LHR: {
+      city: "London, UK",
+      lat: 51.4700,
+      lng: -0.4543
+    },
+    CDG: {
+      city: "Paris, France",
+      lat: 49.0097,
+      lng: 2.5479
+    },
+    DEN: {
+      city: "Denver, USA",
+      lat: 39.8561,
+      lng: -104.6737
+    }
+  };
+
+  // Sample nonstop routes from CVG
+  const routes = [
+    {to: "ATL", airline: "Delta"},
+    {to: "ATL", airline: "Frontier"},
+    {to: "ORD", airline: "American"},
+    {to: "ORD", airline: "United"},
+    {to: "JFK", airline: "Delta"},
+    {to: "JFK", airline: "American"},
+    {to: "LHR", airline: "British Airways"},
+    {to: "CDG", airline: "Delta"},
+    {to: "DEN", airline: "Frontier"},
+    {to: "DEN", airline: "United"},
+    {to: "DEN", airline: "Southwest"}
+  ];
+
+  // Initialize map
+  const map = L.map("map").setView([39, -85], 4);
+
+  // Map background
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+    {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+      subdomains: "abcd",
+      maxZoom: 19
+    }
+  ).addTo(map);
+
+  // Airport markers
+  const airportLayer = L.layerGroup().addTo(map);
+
+  // Route lines
+  const routeLayer = L.layerGroup().addTo(map);
+
+  // Create curved flight route
+  function createArc(start, end) {
+    const points = [];
+
+    const latDiff = end.lat - start.lat;
+    const lngDiff = end.lng - start.lng;
+
+    const distance = Math.sqrt(
+      latDiff * latDiff + lngDiff * lngDiff
+    );
+
+    const bend = Math.min(distance * 0.16, 12);
+
+    const midLat = (start.lat + end.lat) / 2
+      + Math.abs(lngDiff) / distance * bend;
+
+    const midLng = (start.lng + end.lng) / 2
+      - latDiff / distance * bend;
+
+    for (let i = 0; i <= 50; i++) {
+      const t = i / 50;
+      const inverse = 1 - t;
+
+      const lat =
+        inverse * inverse * start.lat +
+        2 * inverse * t * midLat +
+        t * t * end.lat;
+
+      const lng =
+        inverse * inverse * start.lng +
+        2 * inverse * t * midLng +
+        t * t * end.lng;
+
+      points.push([lat, lng]);
+    }
+
+    return points;
+  }
+
+  // Populate airline dropdown
+  const airlines = [
+    ...new Set(routes.map(route => route.airline))
+  ].sort();
+
+  const filter = document.getElementById("airlineFilter");
+
+  airlines.forEach(airline => {
+    const option = document.createElement("option");
+    option.value = airline;
+    option.textContent = airline;
+    filter.appendChild(option);
+  });
+
+  // Draw map
+  function drawMap() {
+    airportLayer.clearLayers();
+    routeLayer.clearLayers();
+
+    const selectedAirline = filter.value;
+
+    const filteredRoutes = routes.filter(route =>
+      selectedAirline === "All" ||
+      route.airline === selectedAirline
+    );
+
+    // CVG airport marker
+    L.circleMarker(
+      [airports.CVG.lat, airports.CVG.lng],
+      {
+        radius: 9,
+        color: "#ffffff",
+        fillColor: "#22c55e",
+        fillOpacity: 1,
+        weight: 3
+      }
+    )
+    .bindPopup("<b>CVG</b><br>Cincinnati/Northern Kentucky")
+    .addTo(airportLayer);
+
+    const destinations = new Set();
+
+    filteredRoutes.forEach(route => {
+      const destination = airports[route.to];
+
+      if (!destination) return;
+
+      destinations.add(route.to);
+
+      // Flight route
+      L.polyline(
+        createArc(airports.CVG, destination),
+        {
+          color: "#38bdf8",
+          weight: 2,
+          opacity: 0.75
+        }
+      )
+      .bindPopup(
+        "CVG → " + route.to +
+        "<br>Airline: " + route.airline
+      )
+      .addTo(routeLayer);
+    });
+
+    // Destination airport markers
+    destinations.forEach(code => {
+      const airport = airports[code];
+
+      L.circleMarker(
+        [airport.lat, airport.lng],
+        {
+          radius: 6,
+          color: "#ffffff",
+          fillColor: "#f59e0b",
+          fillOpacity: 1,
+          weight: 2
+        }
+      )
+      .bindPopup(
+        "<b>" + code + "</b><br>" +
+        airport.city +
+        "<br>Origin: CVG"
+      )
+      .addTo(airportLayer);
+    });
+
+    document.getElementById("stats").textContent =
+      filteredRoutes.length + " route entries | " +
+      destinations.size + " destinations";
+  }
+
+  filter.addEventListener("change", drawMap);
+
+  drawMap();
+</script>
+
+</body>
+</html>
