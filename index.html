@@ -475,6 +475,23 @@
     filter.appendChild(option);
   });
 
+// Airline route colors
+const airlineColors = {
+  "Delta": "#2563eb",
+  "Allegiant": "#22c55e",
+  "Frontier": "#84cc16",
+  "American": "#ef4444",
+  "United": "#a855f7",
+  "Southwest": "#f97316",
+  "British Airways": "#1e40af",
+  "Breeze Airways": "#ec4899",
+  "Air Canada": "#dc2626",
+  "Viva Aerobus": "#14b8a6",
+  "Sun Country": "#eab308",
+  "Vacation Express": "#06b6d4",
+  "Alaska Airlines": "#94a3b8"
+};
+  
   // Draw map
   function drawMap() {
     airportLayer.clearLayers();
@@ -510,16 +527,23 @@
 
       destinations.add(route.to);
 
-      // Flight route
-      L.polyline(
-        createArc(airports.CVG, destination),
-        {
-          color: route.seasonal ? "#f59e0b" : "#38bdf8",
-          weight: 2,
-          opacity: 0.85,
-          dashArray: route.seasonal ? "6, 6" : null
-        }
-      )
+      // Flight route - airline specific colors
+L.polyline(
+  createArc(airports.CVG, destination),
+  {
+    color: airlineColors[route.airline] || "#ffffff",
+    weight: 2.5,
+    opacity: 0.9,
+    dashArray: route.seasonal ? "6, 6" : null
+  }
+)
+.bindPopup(
+  "<b>CVG → " + route.to + "</b>" +
+  "<br>Airline: " + route.airline +
+  (route.seasonal ? "<br>Seasonal service" : "<br>Regular service")
+)
+.addTo(routeLayer);
+      
       .bindPopup(
         "CVG → " + route.to +
         "<br>Airline: " + route.airline
