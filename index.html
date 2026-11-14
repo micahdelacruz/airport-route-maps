@@ -159,6 +159,48 @@
   height: 100%;
 }
 
+/* AIRLINE COLOR LEGEND */
+
+#airlineLegend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 10px 18px;
+  max-width: 1100px;
+  margin: 14px auto 4px;
+  padding: 10px 16px;
+  background: #17243a;
+  border: 1px solid #33445e;
+  border-radius: 10px;
+}
+
+.legend-title {
+  width: 100%;
+  text-align: center;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: bold;
+  letter-spacing: 1px;
+  margin-bottom: 3px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #dbe5f1;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.legend-line {
+  display: inline-block;
+  width: 25px;
+  height: 3px;
+  border-radius: 4px;
+}
+
 /* MOBILE RESPONSIVENESS */
 
 @media (max-width: 700px) {
@@ -194,6 +236,9 @@
   <select id="airlineFilter">
     <option value="All">All Airlines</option>
   </select>
+  
+  <div id="airlineLegend"></div>
+  
 </div>
 
 <div class="map-layout">
@@ -491,6 +536,40 @@ const airlineColors = {
   "Vacation Express": "#06b6d4",
   "Alaska Airlines": "#94a3b8"
 };
+  // Build airline color legend
+function renderAirlineLegend() {
+  const legend = document.getElementById("airlineLegend");
+
+  legend.innerHTML = "";
+
+  const title = document.createElement("div");
+  title.className = "legend-title";
+  title.textContent = "AIRLINE ROUTE COLORS";
+
+  legend.appendChild(title);
+
+  airlines.forEach(airline => {
+    const item = document.createElement("div");
+    item.className = "legend-item";
+
+    const line = document.createElement("span");
+    line.className = "legend-line";
+
+    line.style.backgroundColor =
+      airlineColors[airline] || "#ffffff";
+
+    const name = document.createElement("span");
+    name.textContent = airline;
+
+    item.appendChild(line);
+    item.appendChild(name);
+
+    legend.appendChild(item);
+  });
+}
+
+// Display legend
+renderAirlineLegend();
   
  // Draw map
   function drawMap() {
