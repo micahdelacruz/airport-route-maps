@@ -544,13 +544,6 @@ L.polyline(
 )
 .addTo(routeLayer);
       
-      .bindPopup(
-        "CVG → " + route.to +
-        "<br>Airline: " + route.airline
-      )
-      .addTo(routeLayer);
-    });
-
     // Destination airport markers
 Object.keys(destinationMarkers).forEach(code => {
   delete destinationMarkers[code];
