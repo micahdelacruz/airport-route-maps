@@ -492,7 +492,7 @@ const airlineColors = {
   "Alaska Airlines": "#94a3b8"
 };
   
-  // Draw map
+ // Draw map
   function drawMap() {
     airportLayer.clearLayers();
     routeLayer.clearLayers();
@@ -504,11 +504,11 @@ const airlineColors = {
       route.airline === selectedAirline
     );
 
-    // CVG airport marker
+    // CVG origin marker
     L.circleMarker(
       [airports.CVG.lat, airports.CVG.lng],
       {
-        radius: 9,
+        radius: 10,
         color: "#ffffff",
         fillColor: "#22c55e",
         fillOpacity: 1,
@@ -520,6 +520,7 @@ const airlineColors = {
 
     const destinations = new Set();
 
+    // Draw each airline route
     filteredRoutes.forEach(route => {
       const destination = airports[route.to];
 
@@ -527,61 +528,63 @@ const airlineColors = {
 
       destinations.add(route.to);
 
-      // Flight route - airline specific colors
-L.polyline(
-  createArc(airports.CVG, destination),
-  {
-    color: airlineColors[route.airline] || "#ffffff",
-    weight: 2.5,
-    opacity: 0.9,
-    dashArray: route.seasonal ? "6, 6" : null
+      L.polyline(
+        createArc(airports.CVG, destination),
+        {
+          color: airlineColors[route.airline] || "#ffffff",
+          weight: 2.5,
+          opacity: 0.9,
+          dashArray: route.seasonal ? "6, 6" : null
+        }
+      )
+      .bindPopup(
+        "<b>CVG → " + route.to + "</b>" +
+        "<br>Airline: " + route.airline +
+        (route.seasonal
+          ? "<br>Seasonal service"
+          : "<br>Regular service")
+      )
+      .addTo(routeLayer);
+    });
+
+    // Clear old destination markers
+    Object.keys(destinationMarkers).forEach(code => {
+      delete destinationMarkers[code];
+    });
+
+    // Add destination airport markers
+    destinations.forEach(code => {
+      const airport = airports[code];
+
+      const marker = L.circleMarker(
+        [airport.lat, airport.lng],
+        {
+          radius: 6,
+          color: "#ffffff",
+          fillColor: "#f59e0b",
+          fillOpacity: 1,
+          weight: 2
+        }
+      );
+
+      marker.bindPopup(
+        "<b>" + code + "</b><br>" +
+        airport.city +
+        "<br>Origin: CVG"
+      );
+
+      marker.addTo(airportLayer);
+      destinationMarkers[code] = marker;
+    });
+
+    // Update destination sidebar
+    renderDestinations(filteredRoutes);
+
+    // Update route statistics
+    document.getElementById("stats").textContent =
+      filteredRoutes.length + " route entries | " +
+      destinations.size + " destinations";
   }
-)
-.bindPopup(
-  "<b>CVG → " + route.to + "</b>" +
-  "<br>Airline: " + route.airline +
-  (route.seasonal ? "<br>Seasonal service" : "<br>Regular service")
-)
-.addTo(routeLayer);
-      
-    // Destination airport markers
-Object.keys(destinationMarkers).forEach(code => {
-  delete destinationMarkers[code];
-});
-
-destinations.forEach(code => {
-  const airport = airports[code];
-
-  const marker = L.circleMarker(
-    [airport.lat, airport.lng],
-    {
-      radius: 6,
-      color: "#ffffff",
-      fillColor: "#f59e0b",
-      fillOpacity: 1,
-      weight: 2
-    }
-  );
-
-  marker.bindPopup(
-    "<b>" + code + "</b><br>" +
-    airport.city +
-    "<br>Origin: CVG"
-  );
-
-  marker.addTo(airportLayer);
-
-  destinationMarkers[code] = marker;
-});
-
-// Build destination sidebar
-
-renderDestinations(filteredRoutes);
-
-document.getElementById("stats").textContent =
-  filteredRoutes.length + " route entries | " +
-  destinations.size + " destinations";
-}
   
 function renderDestinations(filteredRoutes) {
 
