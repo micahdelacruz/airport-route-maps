@@ -418,8 +418,9 @@
 
   // Route lines
   const routeLayer = L.layerGroup().addTo(map);
+  
   // Store destination markers for sidebar clicks
-const destinationMarkers = {};
+  const destinationMarkers = {};
 
   // Create curved flight route
   function createArc(start, end) {
@@ -557,32 +558,53 @@ destinations.forEach(code => {
 });
 
 // Build destination sidebar
+
 renderDestinations(filteredRoutes);
+
+document.getElementById("stats").textContent =
+  filteredRoutes.length + " route entries | " +
+  destinations.size + " destinations";
+}
+  
+function renderDestinations(filteredRoutes) {
+
+  const list = document.getElementById("destinationList");
+  const count = document.getElementById("destinationCount");
+  const search = document.getElementById("destinationSearch");
+
+  list.innerHTML = "";
+
+  const grouped = {};
+
+  filteredRoutes.forEach(route => {
+    if (!grouped[route.to]) {
+      grouped[route.to] = [];
+    }
+
+    if (!grouped[route.to].includes(route.airline)) {
+      grouped[route.to].push(route.airline);
+    }
+  });
+
+  const searchText = search.value.toLowerCase();
+
+  const matchingCodes = Object.keys(grouped)
+    .filter(code => {
       const airport = airports[code];
 
-      L.circleMarker(
-        [airport.lat, airport.lng],
-        {
-          radius: 6,
-          color: "#ffffff",
-          fillColor: "#f59e0b",
-          fillOpacity: 1,
-          weight: 2
-        }
-      )
-      .bindPopup(
-        "<b>" + code + "</b><br>" +
-        airport.city +
-        "<br>Origin: CVG"
-      )
-      .addTo(airportLayer);
-    });
+      return airport && (
+        code.toLowerCase().includes(searchText) ||
+        airport.city.toLowerCase().includes(searchText) ||
+        grouped[code].some(airline =>
+          airline.toLowerCase().includes(searchText)
+        )
+      );
+    })
+    .sort((a, b) =>
+      airports[a].city.localeCompare(airports[b].city)
+    );
 
-    document.getElementById("stats").textContent =
-      filteredRoutes.length + " route entries | " +
-      destinations.size + " destinations";
-  }
-count.textContent =
+  count.textContent =
     matchingCodes.length + " destinations";
 
   matchingCodes.forEach(code => {
@@ -602,15 +624,13 @@ count.textContent =
 
     const airlines = document.createElement("div");
     airlines.className = "destination-airlines";
-    airlines.textContent =
-      grouped[code].join(" • ");
+    airlines.textContent = grouped[code].join(" • ");
 
     item.appendChild(airportCode);
     item.appendChild(city);
     item.appendChild(airlines);
 
     item.addEventListener("click", () => {
-
       const marker = destinationMarkers[code];
 
       if (marker) {
@@ -622,7 +642,6 @@ count.textContent =
 
         marker.openPopup();
       }
-
     });
 
     list.appendChild(item);
@@ -634,10 +653,10 @@ document.getElementById("destinationSearch")
   .addEventListener("input", () => {
     drawMap();
   });
-  filter.addEventListener("change", drawMap);
 
-  drawMap();
+filter.addEventListener("change", drawMap);
+
+drawMap();
 </script>
-
 </body>
 </html>
