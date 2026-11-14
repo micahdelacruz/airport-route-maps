@@ -649,6 +649,32 @@ function renderDestinations(filteredRoutes) {
     item.appendChild(airportCode);
     item.appendChild(city);
     item.appendChild(airlines);
+    
+// Flightradar24 tracking link
+const trackLink = document.createElement("a");
+
+trackLink.href = "https://www.flightradar24.com/";
+
+trackLink.target = "_blank";
+
+trackLink.rel = "noopener noreferrer";
+
+trackLink.textContent =
+  "Track CVG-" + code + " on Flightradar24 ↗";
+
+trackLink.style.display = "block";
+trackLink.style.marginTop = "8px";
+trackLink.style.fontSize = "12px";
+trackLink.style.color = "#38bdf8";
+trackLink.style.textDecoration = "none";
+trackLink.style.fontWeight = "bold";
+
+// Prevent link clicks from triggering map clicks
+trackLink.addEventListener("click", event => {
+  event.stopPropagation();
+});
+
+item.appendChild(trackLink);
 
     item.addEventListener("click", () => {
       const marker = destinationMarkers[code];
